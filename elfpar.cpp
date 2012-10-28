@@ -7,6 +7,7 @@ int main(int argc, char* argv[])
 
 	FILE* file;
 	Elf32_Ehdr filehdr;
+	Elf32_Shdr sechdr;
 	if (argc > 2)
 	{
 		std::cout << "Error! Too much arguments!" << std::endl;
@@ -64,28 +65,28 @@ int main(int argc, char* argv[])
 	printf("%23d", filehdr.e_machine);
 	switch (filehdr.e_machine) {
 	        case 0: 
-			printf("%14s\n", "NONE");  
+			printf("%14s\n", "NO MACHINE");  
 			break;
 	        case 1: 
-			printf("%14s\n", "M32");
+			printf("%14s\n", "AT&T WE 32100");
 			break;
 	        case 2: 
 			printf("%14s\n", "SPARC"); 
 			break;
 	        case 3: 
-			printf("%14s\n", "386");			
+			printf("%14s\n", "Intel 80386");			
 			break;
 	        case 4: 
-			printf("%14s\n", "68K"); 
+			printf("%14s\n", "MOTOROLA 68000"); 
 			break;
 		case 5: 
-			printf("%14s\n", "88K");  
+			printf("%14s\n", "MOTOROLA 88000");  
 			break;
-		case 6: 
-			printf("%14s\n", "486"); 
+		case 7: 
+			printf("%14s\n", "INTEL 80860"); 
 			break;
-	        case 7: 
-			printf("%14s\n", "860");  
+	        case 8: 
+			printf("%14s\n", "MIPS RS3000");  
 			break;
 		default: 
 			std::cout <<  " Error!" << std::endl; 
@@ -137,7 +138,27 @@ int main(int argc, char* argv[])
 	printf("%1s", "");
 	std::cout << filehdr.e_shstrndx; 	
 	printf("%12d\n", filehdr.e_shstrndx);
-	fclose(file);
 	printf("\n");
+
+	int position = filehdr.e_shoff + filehdr.e_shstrndx*filehdr.e_shentsize;
+	fseek(file, position, SEEK_SET);
+	fread(&sechdr, sizeof(Elf32_Shdr), 1, file);
+	int offset = sechdr.sh_offset;
+	char* sectab;
+	sectab = new char[sechdr.sh_size];
+	fseek(file, sechdr.sh_offset, SEEK_SET);
+	fread(sectab, sechdr.sh_size, 1, file);
+	position = filehdr.e_shoff;
+	printf("\n                  Section information\n");
+	for (int i=0; i < filehdr.e_shnum; i++)
+	{
+		fseek(file, position, SEEK_SET);
+		fread(&sechdr, sizeof(Elf32_Shdr), 1, file);
+		fseek(file, offset + sechdr.sh_name, SEEK_SET);
+		printf("%20s %#12x %#12x %12d\n", sectab + sechdr.sh_name, sechdr.sh_addr, sechdr.sh_offset, sechdr.sh_size);
+		position = position + filehdr.e_shentsize;
+	}
+	delete [] sectab;	
+	fclose(file);	
 	return 0;
 }
